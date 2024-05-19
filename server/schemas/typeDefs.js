@@ -6,6 +6,7 @@ const typeDefs = `
         bookCount: Int
         savedBooks: [Book]
     }
+
     type Book {
         bookId: ID!
         authors: [String]
@@ -14,10 +15,12 @@ const typeDefs = `
         image: String
         link: String
     }
+
     type Auth {
         token: ID!
         user: User
     }
+    // Created input type to handle parameters for saving a book
     input BookInfo {
         bookId: ID!
         authors: [String]
@@ -26,9 +29,11 @@ const typeDefs = `
         image: String
         link: String
     }
+
     type Query {
         me: User
     }
+    
     type Mutation {
         login(email: String!, password: String!): Auth
         addUser(username: String!, email: String!, password: String!): Auth
