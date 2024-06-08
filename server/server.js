@@ -1,8 +1,8 @@
+require ('dotenv/config')
 const express = require('express');
 const { ApolloServer } = require('@apollo/server');
 const { expressMiddleware } = require('@apollo/server/express4');
 const path = require('path');
-const { authMiddleware } = require('./utils/auth');
 const { typeDefs, resolvers } = require('./schemas');
 const db = require('./config/connection');
 
@@ -21,7 +21,23 @@ const startApolloServer = async () => {
   app.use(express.json());
 
   app.use('/graphql', expressMiddleware(server, {
-    context: authMiddleware
+    context: function ({ req }) {
+      // allows token to be sent via  req.query or headers
+      let token = req.headers.authorization?.trim().split(' ').pop();
+
+      if (!token) {
+        return {};
+      }
+
+      // verify token and get user data out of it
+      try {
+        const { data: user } = jwt.verify(token, process.env.AUTH_JWT_SECRET, { maxAge: expiration });
+        return {user}
+      } catch {
+        console.log('Invalid token');
+        return {};
+      }
+    },
   }));
 
   if (process.env.NODE_ENV === 'production') {
@@ -32,12 +48,12 @@ const startApolloServer = async () => {
     });
   }
 
-db.once('open', () => {
-  app.listen(PORT, () => {
-    console.log(`🌍 Now listening on localhost:${PORT}`);
-    console.log(`Use GraphQL at http://localhost:${PORT}/graphql`)
-})
-})
+  db.once('open', () => {
+    app.listen(PORT, () => {
+      console.log(`🌍 Now listening on localhost:${PORT}`);
+      console.log(`Use GraphQL at http://localhost:${PORT}/graphql`)
+    })
+  })
 }
 
 startApolloServer();
