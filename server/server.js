@@ -1,4 +1,4 @@
-require ('dotenv/config')
+require ('dotenv/config');
 const express = require('express');
 const { ApolloServer } = require('@apollo/server');
 const { expressMiddleware } = require('@apollo/server/express4');
@@ -6,54 +6,36 @@ const path = require('path');
 const { typeDefs, resolvers } = require('./schemas');
 const db = require('./config/connection');
 
-const app = express();
 const PORT = process.env.PORT || 3001;
 const server = new ApolloServer({
   typeDefs,
   resolvers,
 });
 
+const app = express();
+
 // Create a new instance of an Apollo server with the GraphQL schema
 const startApolloServer = async () => {
   await server.start();
 
-  app.use(express.urlencoded({ extended: true }));
+  if (process.env.NODE_ENV === 'production') {
+    const BUILD_PATH = path.resolve(__dirname,'../front-end/dist')
+    app.use( express.static(BUILD_PATH))
+    app.get('*', (req, res) => {
+      res.sendFile(path.resolve(BUILD_PATH, 'index.html'))
+    })
+  }
+  app.use(express.urlencoded({ extended: false }));
   app.use(express.json());
 
-  app.use('/graphql', expressMiddleware(server, {
-    context: function ({ req }) {
-      // allows token to be sent via  req.query or headers
-      let token = req.headers.authorization?.trim().split(' ').pop();
-
-      if (!token) {
-        return {};
-      }
-
-      // verify token and get user data out of it
-      try {
-        const { data: user } = jwt.verify(token, process.env.AUTH_JWT_SECRET, { maxAge: expiration });
-        return {user}
-      } catch {
-        console.log('Invalid token');
-        return {};
-      }
-    },
-  }));
-
-  if (process.env.NODE_ENV === 'production') {
-    app.use(express.static(path.join(__dirname, '../client/dist')));
-
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(__dirname, '../client/dist/index.html'));
-    });
-  }
+  app.use('/graphql', expressMiddleware(server));
 
   db.once('open', () => {
     app.listen(PORT, () => {
-      console.log(`🌍 Now listening on localhost:${PORT}`);
-      console.log(`Use GraphQL at http://localhost:${PORT}/graphql`)
-    })
-  })
-}
+      console.log(`API server running on port ${PORT}!`);
+      console.log(`Use GraphQL at http://localhost:${PORT}/graphql`);
+    });
+  });
+};
 
 startApolloServer();
