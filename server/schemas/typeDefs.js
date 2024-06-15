@@ -20,7 +20,7 @@ const typeDefs = `
         token: ID!
         user: User
     }
-    // Created input type to handle parameters for saving a book
+        
     input BookInfo {
         bookId: ID!
         authors: [String]
